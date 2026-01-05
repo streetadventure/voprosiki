@@ -74,11 +74,20 @@
 
         .category-selector {
             display: flex;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
             gap: 8px;
-            justify-content: center;
-            max-width: 100%;
-            padding: 0 10px;
+            max-width: 100vw;
+            padding: 0 20px;
+            overflow-x: auto;
+            overflow-y: hidden;
+            scroll-behavior: smooth;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+
+        .category-selector::-webkit-scrollbar {
+            display: none;
         }
 
         .category-btn {
@@ -94,6 +103,7 @@
             transition: all 0.3s ease;
             backdrop-filter: blur(10px);
             white-space: nowrap;
+            flex-shrink: 0;
         }
 
         .category-btn:hover {
@@ -334,10 +344,6 @@
 
         /* Мобильная адаптация */
         @media (max-width: 480px) {
-            .category-selector {
-                gap: 6px;
-            }
-
             .category-btn {
                 padding: 6px 12px;
                 font-size: 0.75rem;
@@ -631,16 +637,38 @@
         const hintLeft = card.querySelector('.swipe-hint.left');
         const hintRight = card.querySelector('.swipe-hint.right');
 
+        // Звук перелистывания
+        let audioContext = null;
+
+        function playSwipeSound() {
+            try {
+                if (!audioContext) {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                }
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+
+                // Приятный мягкий звук
+                oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+                oscillator.frequency.exponentialRampToValueAtTime(440, audioContext.currentTime + 0.1);
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.15);
+
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + 0.15);
+            } catch (e) {
+                // Звук не поддерживается - игнорируем
+            }
+        }
+
         // Инициализация категорий
         function initCategories() {
-            // Кнопка "Рандом"
-            const randomBtn = document.createElement('button');
-            randomBtn.className = 'category-btn active';
-            randomBtn.textContent = '🎲 Рандом';
-            randomBtn.dataset.category = 'random';
-            randomBtn.addEventListener('click', () => selectCategory('random'));
-            categorySelector.appendChild(randomBtn);
-
             // Кнопка "Все"
             const allBtn = document.createElement('button');
             allBtn.className = 'category-btn';
@@ -648,6 +676,14 @@
             allBtn.dataset.category = '0';
             allBtn.addEventListener('click', () => selectCategory(0));
             categorySelector.appendChild(allBtn);
+
+            // Кнопка "Рандом"
+            const randomBtn = document.createElement('button');
+            randomBtn.className = 'category-btn active';
+            randomBtn.textContent = '🎲 Рандом';
+            randomBtn.dataset.category = 'random';
+            randomBtn.addEventListener('click', () => selectCategory('random'));
+            categorySelector.appendChild(randomBtn);
 
             // Кнопки категорий
             categories.forEach(cat => {
@@ -760,6 +796,7 @@
 
         // Навигация
         function nextCard() {
+            playSwipeSound();
             if (currentIndex < currentQuestions.length - 1) {
                 currentIndex++;
                 showCard(true, 'left');
@@ -771,6 +808,7 @@
         }
 
         function prevCard() {
+            playSwipeSound();
             if (currentIndex > 0) {
                 currentIndex--;
                 showCard(true, 'right');
